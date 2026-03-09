@@ -66,14 +66,29 @@ const ElectionConfig: React.FC = () => {
     }
   };
 
-  const updateElectionField = (field: keyof typeof election, value: string) => {
+  const updateElectionField = (field: string, value: string) => {
     const newDb = { ...db };
-    const idx = newDb.elections.findIndex(e => e.id === election.id);
-    if (idx !== -1) {
-      (newDb.elections[idx] as any)[field] = value;
-      saveDB(newDb);
-      setDb(newDb);
+
+    // Si no hay elecciones, creamos la primera
+    if (!newDb.elections || newDb.elections.length === 0) {
+      newDb.elections = [{
+        id: 'e1',
+        title: 'Elección Gobierno Escolar',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0],
+        status: ElectionStatus.ACTIVE,
+        types: [CandidacyType.PERSONERO],
+        institutionName: '',
+        rectorName: '',
+        coordinatorName: ''
+      }];
     }
+
+    const idx = 0; // Siempre editamos la principal para este sistema
+    (newDb.elections[idx] as any)[field] = value;
+
+    saveDB(newDb);
+    setDb(newDb);
   };
 
   const generatePDFReport = () => {
