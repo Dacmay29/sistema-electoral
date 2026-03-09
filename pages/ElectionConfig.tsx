@@ -8,8 +8,12 @@ import autoTable from 'jspdf-autotable';
 
 const ElectionConfig: React.FC = () => {
   const [db, setDb] = useState(getDB());
-  const election = db.elections[0];
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Safe access to election
+  const election = db.elections && db.elections.length > 0
+    ? db.elections[0]
+    : { id: 'default', title: 'Nueva Elección', status: ElectionStatus.DRAFT, types: [CandidacyType.PERSONERO], institutionName: '', rectorName: '', coordinatorName: '' };
 
   const handleToggleElection = async () => {
     const newStatus = election.status === ElectionStatus.ACTIVE ? ElectionStatus.CLOSED : ElectionStatus.ACTIVE;
