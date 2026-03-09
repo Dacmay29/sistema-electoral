@@ -197,6 +197,13 @@ export const resetDB = () => {
   saveDB(INITIAL_STATE);
 };
 
+// Helper to check if a string is a valid UUID
+const isValidUUID = (id: string) => {
+  const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  // Fallback check for common shorter IDs
+  return id.length > 30 && id.includes('-');
+};
+
 // Supabase Sync Functions
 export const syncToSupabase = async () => {
   const db = getDB();
@@ -205,9 +212,10 @@ export const syncToSupabase = async () => {
 
     // Sync Users
     if (db.users.length > 0) {
+      console.log('Sincronizando Usuarios...');
       const { error: userError } = await supabase.from('users').upsert(
         db.users.map(u => ({
-          id: u.id,
+          id: isValidUUID(u.id) ? u.id : undefined,
           name: u.name,
           document: u.document,
           role: u.role,
@@ -217,16 +225,20 @@ export const syncToSupabase = async () => {
           status: u.status,
           photo: u.photo
         })),
-        { onConflict: 'id' }
+        { onConflict: 'document' }
       );
-      if (userError) throw userError;
+      if (userError) {
+        console.error('Error sincronizando usuarios:', userError.message);
+        throw userError;
+      }
     }
 
     // Sync Candidates
     if (db.candidates.length > 0) {
+      console.log('Sincronizando Candidatos...');
       const { error: candError } = await supabase.from('candidates').upsert(
         db.candidates.map(c => ({
-          id: c.id,
+          id: isValidUUID(c.id) ? c.id : undefined,
           name: c.name,
           grade: c.grade,
           proposal: c.proposal,
@@ -235,16 +247,20 @@ export const syncToSupabase = async () => {
           vote_count: c.voteCount,
           ballot_number: c.ballotNumber
         })),
-        { onConflict: 'id' }
+        { onConflict: 'name' }
       );
-      if (candError) throw candError;
+      if (candError) {
+        console.error('Error sincronizando candidatos:', candError.message);
+        throw candError;
+      }
     }
 
     // Sync Elections
     if (db.elections.length > 0) {
+      console.log('Sincronizando Elección...');
       const { error: electError } = await supabase.from('elections').upsert(
         db.elections.map(e => ({
-          id: e.id,
+          id: isValidUUID(e.id) ? e.id : undefined,
           title: e.title,
           status: e.status,
           types: e.types,
@@ -252,9 +268,12 @@ export const syncToSupabase = async () => {
           rector_name: e.rectorName,
           coordinator_name: e.coordinatorName
         })),
-        { onConflict: 'id' }
+        { onConflict: 'title' }
       );
-      if (electError) throw electError;
+      if (electError) {
+        console.error('Error sincronizando elecciones:', electError.message);
+        throw electError;
+      }
     }
 
     console.log('Sincronización completada con éxito.');
