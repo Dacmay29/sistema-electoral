@@ -32,10 +32,18 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkConnection = async () => {
+      console.log('Intentando conectar con Supabase...');
       try {
         const { data, error } = await supabase.from('candidates').select('count', { count: 'exact', head: true });
-        setIsConnected(!error);
+        if (error) {
+          console.error('Error de Supabase:', error.message);
+          setIsConnected(false);
+        } else {
+          console.log('Conexión con Supabase establecida correctamente.');
+          setIsConnected(true);
+        }
       } catch (e) {
+        console.error('Error de red/conexión:', e);
         setIsConnected(false);
       }
     };
