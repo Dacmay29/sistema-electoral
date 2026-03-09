@@ -61,6 +61,13 @@ const App: React.FC = () => {
     setActiveTab('dashboard');
   };
 
+  useEffect(() => {
+    const item = navItems.find(i => i.id === activeTab);
+    if (item) {
+      document.title = `${item.label} | EduVote Pro`;
+    }
+  }, [activeTab]);
+
   const renderContent = () => {
     if (!currentUser) return <Login onLogin={handleLogin} />;
 
