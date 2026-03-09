@@ -1,5 +1,6 @@
 import { Role, CandidacyType, ElectionStatus, User, Candidate, Election, AuditLog, Vote } from './types';
 import * as XLSX from 'xlsx';
+import { supabase } from './supabase';
 
 // Simple hash function for "Local Blockchain"
 const sha256 = async (message: string) => {
@@ -194,4 +195,145 @@ export const fileToBase64 = (file: File): Promise<string> => {
 
 export const resetDB = () => {
   saveDB(INITIAL_STATE);
+};
+
+// Supabase Sync Functions
+export const syncToSupabase = async () => {
+  const db = getDB();
+  try {
+    // Sync Users
+    if (db.users.length > 0) {
+      await supabase.from('users').upsert(
+        db.users.map(u => ({
+          id: u.id.length > 30 ? u.id : undefined, // Supabase expects UUIDs
+          name: u.name,
+          document: u.document,
+          role: u.role,
+          grade: u.grade,
+          section: u.section,
+          has_voted: u.hasVoted,
+          status: u.status,
+          photo: u.photo
+        })),
+        { onConflict: 'document' }
+      );
+    }
+
+    // Sync Candidates
+    if (db.candidates.length > 0) {
+      await supabase.from('candidates').upsert(
+        db.candidates.map(c => ({
+          id: c.id === 'blank' ? undefined : (c.id.length > 30 ? c.id : undefined),
+          name: c.name,
+          grade: c.grade,
+          proposal: c.proposal,
+          photo: c.photo,
+          type: c.type,
+          vote_count: c.voteCount,
+          ballot_number: c.ballotNumber
+        }))
+      );
+    }
+
+    // Sync Elections
+    if (db.elections.length > 0) {
+      await supabase.from('elections').upsert(
+        db.elections.map(e => ({
+          title: e.title,
+          status: e.status,
+          types: e.types,
+          institution_name: e.institutionName,
+          rector_name: e.rectorName,
+          coordinator_name: e.coordinatorName
+        }))
+      );
+    }
+
+    // Sync Audit Logs
+    if (db.auditLogs.length > 0) {
+      await supabase.from('audit_logs').upsert(
+        db.auditLogs.map(l => ({
+          user_name: l.user,
+          action: l.action,
+          details: l.details,
+          hash: l.hash,
+          previous_hash: l.previousHash
+        }))
+      );
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error syncing to Supabase:', error);
+    return false;
+  }
+};
+
+export const pullFromSupabase = async (): Promise<boolean> => {
+  try {
+    const { data: users } = await supabase.from('users').select('*');
+    const { data: candidates } = await supabase.from('candidates').select('*');
+    const { data: elections } = await supabase.from('elections').select('*');
+    const { data: votes } = await supabase.from('votes').select('*');
+    const { data: logs } = await supabase.from('audit_logs').select('*');
+
+    if (!users || !candidates) return false;
+
+    const newState: DBState = {
+      users: users.map(u => ({
+        id: u.id,
+        name: u.name,
+        document: u.document,
+        role: u.role as Role,
+        grade: u.grade,
+        section: u.section,
+        hasVoted: u.has_voted,
+        status: u.status as 'Activo' | 'Inactivo',
+        photo: u.photo
+      })),
+      candidates: candidates.map(c => ({
+        id: c.id,
+        name: c.name,
+        grade: c.grade,
+        proposal: c.proposal,
+        photo: c.photo,
+        type: c.type as CandidacyType,
+        voteCount: c.vote_count,
+        ballotNumber: c.ballot_number
+      })),
+      elections: elections?.map(e => ({
+        id: e.id,
+        title: e.title,
+        startDate: e.start_date,
+        endDate: e.end_date,
+        status: e.status as ElectionStatus,
+        types: e.types as CandidacyType[],
+        institutionName: e.institution_name,
+        rectorName: e.rector_name,
+        coordinatorName: e.coordinator_name
+      })) || INITIAL_STATE.elections,
+      votes: votes?.map(v => ({
+        id: v.id,
+        voterId: v.voter_id,
+        candidateId: v.candidate_id,
+        timestamp: v.timestamp,
+        hash: v.hash
+      })) || [],
+      auditLogs: logs?.map(l => ({
+        id: l.id,
+        user: l.user_name,
+        action: l.action,
+        timestamp: l.timestamp,
+        details: l.details,
+        hash: l.hash,
+        previousHash: l.previous_hash
+      })) || INITIAL_STATE.auditLogs
+    };
+
+    saveDB(newState);
+    return true;
+  } catch (error) {
+    console.error('Error pulling from Supabase:', error);
+    return false;
+  }
 };

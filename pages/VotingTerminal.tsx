@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Candidate, CandidacyType } from '../types';
 import { getDB, saveDB, addAuditLog } from '../db';
+import { supabase } from '../supabase';
 import { CheckCircle2, AlertCircle, ShieldCheck, ChevronRight, Lock } from 'lucide-react';
 
 interface VotingTerminalProps {
@@ -57,6 +58,22 @@ const VotingTerminal: React.FC<VotingTerminalProps> = ({ user, onVoteComplete })
       if (userIdx !== -1) {
         db.users[userIdx].hasVoted = true;
       }
+
+      // Supabase Cloud Backup (Fire and forget or wait)
+      supabase.from('votes').insert([{
+        voter_id: user.id.length > 30 ? user.id : undefined,
+        candidate_id: selectedCandidate.id,
+        hash: 'SHA256_' + Math.random().toString(36).substr(2, 12)
+      }]).then(() => {
+        // Update vote count on cloud
+        if (selectedCandidate.id !== 'blank') {
+          supabase.rpc('increment_vote_count', { candidate_id: selectedCandidate.id });
+        }
+        // Update user status on cloud
+        if (user.id.length > 30) {
+          supabase.from('users').update({ has_voted: true }).eq('id', user.id);
+        }
+      });
 
       saveDB(db);
       addAuditLog(user.name, 'Voto Registrado', `Voto seguro ID: ${voteId}`).then(() => {
