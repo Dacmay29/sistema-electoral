@@ -1,0 +1,8 @@
+
+{
+  "name": "Sistema de Elección de Personero Estudiantil",
+  "description": "A professional-grade student representative election management system with role-based access, real-time results, and high-security voting protocols.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

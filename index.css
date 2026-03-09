@@ -1,0 +1,24 @@
+
+@layer utilities {
+  .perspective-2000 {
+    perspective: 2000px;
+  }
+  .rotate-y-45 {
+    transform: rotateY(45deg);
+  }
+  .-rotate-y-45 {
+    transform: rotateY(-45deg);
+  }
+  .rotate-y-0 {
+    transform: rotateY(0deg);
+  }
+}
+
+/* Custom animations for the stage */
+.candidate-stage-container {
+  perspective: 2000px;
+}
+
+.candidate-card-3d {
+  transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1), opacity 1s ease, filter 1s ease;
+}
