@@ -130,8 +130,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="bg-blue-600 p-4 rounded-2xl shadow-lg mb-4 text-white">
             <ShieldCheck size={40} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">EduVote Pro v2.0</h1>
-          <p className="text-blue-600 text-center mt-2 font-black text-[10px] uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-full">Modo Emergencia Activo</p>
+          <h1 className="text-2xl font-bold text-slate-900">EduVote Pro v3.0</h1>
+          <p className="text-blue-600 text-center mt-2 font-black text-[10px] uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-full">Modo de Rescate Total Activo</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
