@@ -255,31 +255,74 @@ export const syncToSupabase = async () => {
       }
     }
 
-    // Sync Elections
+    // Sync Elections (Prioridad para el nombre del colegio)
     if (db.elections.length > 0) {
-      console.log('Sincronizando Elección...');
-      const { error: electError } = await supabase.from('elections').upsert(
-        db.elections.map(e => ({
-          id: isValidUUID(e.id) ? e.id : undefined,
-          title: e.title,
-          status: e.status,
-          types: e.types,
-          institution_name: e.institutionName,
-          rector_name: e.rectorName,
-          coordinator_name: e.coordinatorName
-        })),
-        { onConflict: 'title' }
-      );
+      console.log('Sincronizando Elección/Colegio...');
+      const electionToSync = db.elections.map(e => ({
+        id: isValidUUID(e.id) ? e.id : undefined,
+        title: e.title || 'Elección General',
+        status: e.status || 'Activo',
+        types: e.types || [],
+        institution_name: e.institutionName || '',
+        rector_name: e.rectorName || '',
+        coordinator_name: e.coordinatorName || ''
+      }));
+
+      const { error: electError } = await supabase.from('elections').upsert(electionToSync);
+
       if (electError) {
-        console.error('Error sincronizando elecciones:', electError.message);
-        throw electError;
+        console.error('Error en tabla ELECTIONS:', electError.message);
+        throw new Error(`Error en Configuración: ${electError.message}`);
       }
     }
 
-    console.log('Sincronización completada con éxito.');
+    // Sync Users
+    if (db.users.length > 0) {
+      console.log('Sincronizando Usuarios...');
+      const { error: userError } = await supabase.from('users').upsert(
+        db.users.map(u => ({
+          id: isValidUUID(u.id) ? u.id : undefined,
+          name: u.name,
+          document: u.document,
+          role: u.role,
+          grade: u.grade || '',
+          section: u.section || '',
+          has_voted: u.hasVoted || false,
+          status: u.status || 'Activo',
+          photo: u.photo || ''
+        }))
+      );
+      if (userError) {
+        console.error('Error en tabla USERS:', userError.message);
+        throw new Error(`Error en Usuarios: ${userError.message}`);
+      }
+    }
+
+    // Sync Candidates
+    if (db.candidates.length > 0) {
+      console.log('Sincronizando Candidatos...');
+      const { error: candError } = await supabase.from('candidates').upsert(
+        db.candidates.map(c => ({
+          id: isValidUUID(c.id) ? c.id : undefined,
+          name: c.name,
+          grade: c.grade || '',
+          proposal: c.proposal || '',
+          photo: c.photo || '',
+          type: c.type,
+          vote_count: c.voteCount || 0,
+          ballot_number: c.ballotNumber || ''
+        }))
+      );
+      if (candError) {
+        console.error('Error en tabla CANDIDATES:', candError.message);
+        throw new Error(`Error en Candidatos: ${candError.message}`);
+      }
+    }
+
+    console.log('Sincronización total completada.');
     return true;
-  } catch (error) {
-    console.error('CRITICAL: Error en syncToSupabase:', error);
+  } catch (error: any) {
+    console.error('ERROR GLOBAL DE SINCRONIZACIÓN:', error.message);
     return false;
   }
 };
