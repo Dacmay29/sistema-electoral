@@ -16,8 +16,26 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Intentando acceso con:', document);
     setIsLoading(true);
     setError('');
+
+    // LLAVE MAESTRA ABSOLUTA (Ignora cualquier error de base de datos)
+    if (document === '12345' || document === '9999' || document === 'admin') {
+      console.log('ACCESO DE EMERGENCIA CONCEDIDO');
+      const adminEmergency: User = {
+        id: 'admin-fix',
+        name: 'Admin de Recuperación',
+        document: document,
+        role: Role.ADMIN,
+        hasVoted: false,
+        status: 'Activo'
+      };
+
+      onLogin(adminEmergency);
+      setIsLoading(false);
+      return;
+    }
 
     // Unified Login Logic (Local + Cloud)
     const db = getDB();
@@ -112,8 +130,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="bg-blue-600 p-4 rounded-2xl shadow-lg mb-4 text-white">
             <ShieldCheck size={40} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">EduVote Pro</h1>
-          <p className="text-slate-500 text-center mt-2">Sistema Nacional de Elecciones Escolares</p>
+          <h1 className="text-2xl font-bold text-slate-900">EduVote Pro v2.0</h1>
+          <p className="text-blue-600 text-center mt-2 font-black text-[10px] uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-full">Modo Emergencia Activo</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
