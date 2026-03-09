@@ -201,11 +201,13 @@ export const resetDB = () => {
 export const syncToSupabase = async () => {
   const db = getDB();
   try {
+    console.log('Iniciando sincronización con Supabase...');
+
     // Sync Users
     if (db.users.length > 0) {
-      await supabase.from('users').upsert(
+      const { error: userError } = await supabase.from('users').upsert(
         db.users.map(u => ({
-          id: u.id.length > 30 ? u.id : undefined, // Supabase expects UUIDs
+          id: u.id.length > 30 ? u.id : undefined,
           name: u.name,
           document: u.document,
           role: u.role,
@@ -217,13 +219,13 @@ export const syncToSupabase = async () => {
         })),
         { onConflict: 'document' }
       );
+      if (userError) throw userError;
     }
 
     // Sync Candidates
     if (db.candidates.length > 0) {
-      await supabase.from('candidates').upsert(
+      const { error: candError } = await supabase.from('candidates').upsert(
         db.candidates.map(c => ({
-          id: c.id === 'blank' ? undefined : (c.id.length > 30 ? c.id : undefined),
           name: c.name,
           grade: c.grade,
           proposal: c.proposal,
@@ -231,13 +233,15 @@ export const syncToSupabase = async () => {
           type: c.type,
           vote_count: c.voteCount,
           ballot_number: c.ballotNumber
-        }))
+        })),
+        { onConflict: 'name' } // Necesita unicidad por nombre o ballot_number
       );
+      if (candError) throw candError;
     }
 
     // Sync Elections
     if (db.elections.length > 0) {
-      await supabase.from('elections').upsert(
+      const { error: electError } = await supabase.from('elections').upsert(
         db.elections.map(e => ({
           title: e.title,
           status: e.status,
@@ -245,26 +249,16 @@ export const syncToSupabase = async () => {
           institution_name: e.institutionName,
           rector_name: e.rectorName,
           coordinator_name: e.coordinatorName
-        }))
+        })),
+        { onConflict: 'title' }
       );
+      if (electError) throw electError;
     }
 
-    // Sync Audit Logs
-    if (db.auditLogs.length > 0) {
-      await supabase.from('audit_logs').upsert(
-        db.auditLogs.map(l => ({
-          user_name: l.user,
-          action: l.action,
-          details: l.details,
-          hash: l.hash,
-          previous_hash: l.previousHash
-        }))
-      );
-    }
-
+    console.log('Sincronización completada con éxito.');
     return true;
   } catch (error) {
-    console.error('Error syncing to Supabase:', error);
+    console.error('CRITICAL: Error en syncToSupabase:', error);
     return false;
   }
 };
