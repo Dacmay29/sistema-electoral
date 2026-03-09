@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { User, Role } from '../types';
-import { getDB } from '../db';
+import { getDB, saveDB } from '../db';
+import { supabase } from '../supabase';
 import { ShieldCheck, UserCircle, KeyRound, AlertCircle } from 'lucide-react';
 
 interface LoginProps {
@@ -18,22 +19,50 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setIsLoading(true);
     setError('');
 
-    // Simulate API delay
-    setTimeout(() => {
-      const db = getDB();
-      const user = db.users.find(u => u.document === document);
+    // Unified Login Logic (Local + Cloud)
+    const db = getDB();
+    const localUser = db.users.find(u => u.document === document);
 
-      if (user) {
-        if (user.status === 'Inactivo') {
-          setError('Este usuario ha sido deshabilitado.');
-        } else {
-          onLogin(user);
-        }
+    if (localUser) {
+      if (localUser.status === 'Inactivo') {
+        setError('Este usuario ha sido deshabilitado.');
       } else {
-        setError('Documento no encontrado o no autorizado.');
+        onLogin(localUser);
       }
       setIsLoading(false);
-    }, 800);
+    } else {
+      // Intentar buscar en Supabase en tiempo real
+      const performCloudLogin = async () => {
+        try {
+          const { data, error: sbError } = await supabase.from('users').select('*').eq('document', document).single();
+
+          if (data) {
+            const newUser: User = {
+              id: data.id,
+              name: data.name,
+              document: data.document,
+              role: data.role as Role,
+              grade: data.grade,
+              section: data.section,
+              hasVoted: data.has_voted,
+              status: data.status,
+              photo: data.photo
+            };
+            // Guardar en local para futuras sesiones
+            db.users.push(newUser);
+            saveDB(db);
+            onLogin(newUser);
+          } else {
+            setError('Documento no encontrado o no autorizado.');
+          }
+        } catch (err) {
+          setError('Error de conexión con la nube.');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      performCloudLogin();
+    }
   };
 
   return (
