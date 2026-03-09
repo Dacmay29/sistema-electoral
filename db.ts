@@ -22,14 +22,14 @@ interface DBState {
 
 const INITIAL_STATE: DBState = {
   users: [
-    { id: '1', name: 'Admin Principal', document: '12345', role: Role.ADMIN, hasVoted: false, status: 'Activo' },
-    { id: '2', name: 'Rectoría Institucional', document: '11111', role: Role.RECTOR, hasVoted: false, status: 'Activo' },
-    { id: '3', name: 'Jurado Mesa 01', document: '22222', role: Role.JURY, hasVoted: false, status: 'Activo' },
-    { id: '101', name: 'Estudiante Prueba', document: '1010', role: Role.STUDENT, grade: '11', section: 'A', hasVoted: false, status: 'Activo' },
+    { id: '11111111-1111-1111-1111-111111111111', name: 'Admin Principal', document: '12345', role: Role.ADMIN, hasVoted: false, status: 'Activo' },
+    { id: '22222222-2222-2222-2222-222222222222', name: 'Rectoría Institucional', document: '11111', role: Role.RECTOR, hasVoted: false, status: 'Activo' },
+    { id: '33333333-3333-3333-3333-333333333333', name: 'Jurado Mesa 01', document: '22222', role: Role.JURY, hasVoted: false, status: 'Activo' },
+    { id: '44444444-4444-4444-4444-444444444444', name: 'Estudiante Prueba', document: '1010', role: Role.STUDENT, grade: '11', section: 'A', hasVoted: false, status: 'Activo' },
   ],
   candidates: [
     {
-      id: 'c1',
+      id: 'c1c1c1c1-1111-1111-1111-111111111111',
       name: 'Camila Rodriguez',
       grade: '11-B',
       proposal: 'Renovación de espacios deportivos y torneos interclases mensuales.',
@@ -39,7 +39,7 @@ const INITIAL_STATE: DBState = {
       ballotNumber: '02'
     },
     {
-      id: 'c2',
+      id: 'c2c2c2c2-2222-2222-2222-222222222222',
       name: 'Santiago López',
       grade: '11-A',
       proposal: 'Digitalización de la biblioteca y club de robótica extraescolar.',
@@ -49,7 +49,7 @@ const INITIAL_STATE: DBState = {
       ballotNumber: '01'
     },
     {
-      id: 'blank',
+      id: 'blank-blank-blank-blank-blank-blank',
       name: 'Voto en Blanco',
       grade: '-',
       proposal: 'Ninguno de los candidatos anteriores.',
@@ -60,10 +60,10 @@ const INITIAL_STATE: DBState = {
   ],
   elections: [
     {
-      id: 'e1',
-      title: 'Elección Gobierno Escolar 2024',
-      startDate: '2024-03-15',
-      endDate: '2024-03-15',
+      id: '00000000-0000-0000-0000-000000000001',
+      title: 'Elección Gobierno Escolar',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0],
       status: ElectionStatus.ACTIVE,
       types: [CandidacyType.PERSONERO]
     }
@@ -207,7 +207,7 @@ export const syncToSupabase = async () => {
     if (db.users.length > 0) {
       const { error: userError } = await supabase.from('users').upsert(
         db.users.map(u => ({
-          id: u.id.length > 30 ? u.id : undefined,
+          id: u.id,
           name: u.name,
           document: u.document,
           role: u.role,
@@ -217,7 +217,7 @@ export const syncToSupabase = async () => {
           status: u.status,
           photo: u.photo
         })),
-        { onConflict: 'document' }
+        { onConflict: 'id' }
       );
       if (userError) throw userError;
     }
@@ -226,6 +226,7 @@ export const syncToSupabase = async () => {
     if (db.candidates.length > 0) {
       const { error: candError } = await supabase.from('candidates').upsert(
         db.candidates.map(c => ({
+          id: c.id,
           name: c.name,
           grade: c.grade,
           proposal: c.proposal,
@@ -234,7 +235,7 @@ export const syncToSupabase = async () => {
           vote_count: c.voteCount,
           ballot_number: c.ballotNumber
         })),
-        { onConflict: 'name' } // Necesita unicidad por nombre o ballot_number
+        { onConflict: 'id' }
       );
       if (candError) throw candError;
     }
@@ -243,6 +244,7 @@ export const syncToSupabase = async () => {
     if (db.elections.length > 0) {
       const { error: electError } = await supabase.from('elections').upsert(
         db.elections.map(e => ({
+          id: e.id,
           title: e.title,
           status: e.status,
           types: e.types,
@@ -250,7 +252,7 @@ export const syncToSupabase = async () => {
           rector_name: e.rectorName,
           coordinator_name: e.coordinatorName
         })),
-        { onConflict: 'title' }
+        { onConflict: 'id' }
       );
       if (electError) throw electError;
     }
