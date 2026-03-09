@@ -34,9 +34,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       // Intentar buscar en Supabase en tiempo real
       const performCloudLogin = async () => {
         try {
+          console.log('Buscando usuario en Supabase:', document);
           const { data, error: sbError } = await supabase.from('users').select('*').eq('document', document).single();
 
+          if (sbError) {
+            console.error('Error de Supabase en Login:', sbError.message);
+          }
+
           if (data) {
+            console.log('Usuario encontrado en nube:', data.name);
             const newUser: User = {
               id: data.id,
               name: data.name,
@@ -49,13 +55,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               photo: data.photo
             };
             // Guardar en local para futuras sesiones
-            db.users.push(newUser);
-            saveDB(db);
+            const currentDb = getDB();
+            if (!currentDb.users.find(u => u.document === newUser.document)) {
+              currentDb.users.push(newUser);
+              saveDB(currentDb);
+            }
             onLogin(newUser);
           } else {
+            console.warn('Usuario no encontrado en la nube.');
             setError('Documento no encontrado o no autorizado.');
           }
         } catch (err) {
+          console.error('Excepción en login nube:', err);
           setError('Error de conexión con la nube.');
         } finally {
           setIsLoading(false);
