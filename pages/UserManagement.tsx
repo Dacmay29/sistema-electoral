@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Role } from '../types';
-import { getDB, saveDB, addAuditLog, clearAllData, exportDBToExcel } from '../db';
-import { UserPlus, Upload, Search, Trash2, CheckCircle2, XCircle, Download, Edit2, Save, X, FileSpreadsheet } from 'lucide-react';
+import { getDB, saveDB, addAuditLog, clearAllData, exportDBToExcel, syncToSupabase } from '../db';
+import { UserPlus, Upload, Search, Trash2, CheckCircle2, XCircle, Download, Edit2, Save, X, FileSpreadsheet, RefreshCw, Cloud } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const UserManagement: React.FC = () => {
@@ -14,6 +14,7 @@ const UserManagement: React.FC = () => {
     role: Role.STUDENT,
     status: 'Activo'
   });
+  const [isSyncing, setIsSyncing] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -53,6 +54,11 @@ const UserManagement: React.FC = () => {
     setIsModalOpen(false);
     setEditingUser(null);
     setFormData({ role: Role.STUDENT, status: 'Activo' });
+
+    // Auto-sync to cloud
+    setIsSyncing(true);
+    await syncToSupabase();
+    setIsSyncing(false);
   };
 
   const deleteUser = async (id: string) => {
@@ -63,6 +69,11 @@ const UserManagement: React.FC = () => {
     saveDB(db);
     setUsers([...db.users]);
     await addAuditLog('Admin', 'Usuario Eliminado', `Eliminado: ${user?.name} (ID: ${id})`);
+
+    // Auto-sync
+    setIsSyncing(true);
+    await syncToSupabase();
+    setIsSyncing(false);
   };
 
   const handleClearAll = async () => {
@@ -175,9 +186,16 @@ const UserManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
+        <div className="flex flex-col">
           <h2 className="text-2xl font-bold text-slate-800">Padrón Electoral</h2>
-          <p className="text-slate-500">Gestión de la base de datos de votantes.</p>
+          <div className="flex items-center gap-2">
+            <p className="text-slate-500">Gestión de la base de datos de votantes.</p>
+            {isSyncing && (
+              <span className="flex items-center gap-1 text-[10px] font-black text-blue-600 animate-pulse uppercase tracking-tighter">
+                <RefreshCw size={10} className="animate-spin" /> Sincronizando...
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex flex-wrap gap-3">
           <button
@@ -211,6 +229,19 @@ const UserManagement: React.FC = () => {
           >
             <UserPlus size={18} />
             Nuevo
+          </button>
+          <button
+            onClick={async () => {
+              setIsSyncing(true);
+              const success = await syncToSupabase();
+              setIsSyncing(false);
+              if (success) alert('¡Padrón Electoral sincronizado con la Nube!');
+            }}
+            disabled={isSyncing}
+            className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2.5 rounded-xl font-bold hover:bg-emerald-100 border border-emerald-100 transition-colors"
+          >
+            <Cloud size={18} className={isSyncing ? 'animate-bounce' : ''} />
+            {isSyncing ? 'Sincronizando...' : 'Nube'}
           </button>
           <button
             onClick={handleClearAll}
