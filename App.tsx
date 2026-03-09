@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users,
   Vote,
@@ -12,7 +12,8 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Role, User } from './types';
-import { getDB, addAuditLog } from './db';
+import { getDB, addAuditLog, pullFromSupabase } from './db';
+import { supabase } from './supabase';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import VotingTerminal from './pages/VotingTerminal';
@@ -27,12 +28,33 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const checkConnection = async () => {
+      try {
+        const { data, error } = await supabase.from('candidates').select('count', { count: 'exact', head: true });
+        setIsConnected(!error);
+      } catch (e) {
+        setIsConnected(false);
+      }
+    };
+    checkConnection();
   }, []);
+
+  const handleInitialSync = useCallback(async () => {
+    const db = getDB();
+    // Si la DB local está vacía o solo tiene los de prueba, intentamos traer de la nube
+    if (db.users.length <= 4 && isConnected) {
+      await pullFromSupabase();
+    }
+  }, [isConnected]);
+
+  useEffect(() => {
+    if (currentUser?.role === Role.ADMIN) {
+      handleInitialSync();
+    }
+  }, [currentUser, handleInitialSync]);
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: [Role.ADMIN, Role.RECTOR, Role.AUDITOR, Role.ELECTORAL_COMMITTEE] },
@@ -123,6 +145,10 @@ const App: React.FC = () => {
             <h1 className="text-xl font-semibold text-slate-800 capitalize">
               {navItems.find(i => i.id === activeTab)?.label || 'Sistema'}
             </h1>
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${isConnected ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+              {isConnected ? 'Sincronizado' : 'Sin Nube'}
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
