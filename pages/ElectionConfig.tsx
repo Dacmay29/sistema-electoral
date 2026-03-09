@@ -272,7 +272,19 @@ const ElectionConfig: React.FC = () => {
               <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2"><Briefcase size={14} /> Coordinador</label>
               <input type="text" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" value={election.coordinatorName || ''} onChange={(e) => updateElectionField('coordinatorName', e.target.value)} />
             </div>
-            <div className="flex items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex items-end">
+              <button
+                onClick={async () => {
+                  setIsSyncing(true);
+                  const success = await syncToSupabase();
+                  setIsSyncing(false);
+                  if (success) alert('¡Información Institucional guardada en la Nube!');
+                  else alert('Guardado localmente. Error al subir a la nube.');
+                }}
+                className="w-full flex items-center justify-center gap-3 p-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100"
+              >
+                <Save size={20} /> Guardar Cambios
+              </button>
               <button onClick={generatePDFReport} className="w-full flex items-center justify-center gap-3 p-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs hover:bg-blue-600 transition-all shadow-xl">
                 <FileText size={20} /> Generar Acta PDF
               </button>
